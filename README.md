@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PeerChat
 
-## Getting Started
+Instant peer-to-peer messaging in your browser. No servers, no accounts, no sign-up — just share a 3-digit code and start chatting.
 
-First, run the development server:
+Built with WebRTC via [PeerJS](https://peerjs.com/), messages travel directly between browsers. Nothing is stored anywhere.
+
+## ✨ Features
+
+- **Zero friction** — open the page, share your code, connect
+- **3-digit codes** — no copying long UUIDs, just tell your friend "472"
+- **Truly peer-to-peer** — messages go directly between browsers via WebRTC DataChannel
+- **No backend** — static site, deploy anywhere (Netlify, Vercel, GitHub Pages)
+- **E-ink friendly** — optimized for Kindle Scribe and similar e-ink devices
+
+## 🚀 Quick Start
 
 ```bash
+# Clone and install
+git clone https://github.com/your-username/peer-chat.git
+cd peer-chat
+npm install
+
+# Run locally
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open two browser tabs at `http://localhost:3000`. One tab shows your code — enter it in the other tab to connect.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🏗️ Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Tech | Role |
+|---|---|
+| [Next.js](https://nextjs.org/) | Framework (static export) |
+| [PeerJS](https://peerjs.com/) | WebRTC abstraction |
+| [Tailwind CSS](https://tailwindcss.com/) | Styling |
+| [TypeScript](https://www.typescriptlang.org/) | Type safety |
 
-## Learn More
+## 📦 Deploy
 
-To learn more about Next.js, take a look at the following resources:
+The app is configured for static export. Build and deploy the `out/` directory to any static host:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run build   # → outputs to out/
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Netlify
 
-## Deploy on Vercel
+A `netlify.toml` is included. Just connect your repo — it works out of the box.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Other Hosts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Upload the `out/` directory to any static file host (GitHub Pages, Cloudflare Pages, S3, etc.).
+
+## 🖥️ E-Ink / Kindle Scribe Support
+
+The UI is designed for e-ink displays:
+
+- High-contrast black & white palette (no colors/gradients)
+- All CSS animations and transitions disabled to prevent ghosting
+- Large touch targets (≥ 48px) for imprecise e-ink taps
+- No `backdrop-filter` or blur effects
+- Font antialiasing disabled for maximum crispness
+
+See [`docs/browser.md`](docs/browser.md) for detailed Kindle Scribe browser capabilities.
+
+## 📁 Project Structure
+
+```
+app/
+├── components/
+│   ├── ChatApp.tsx      # Main state machine (lobby → chat)
+│   ├── ChatView.tsx     # Message bubbles & input
+│   └── Lobby.tsx        # Code display & connect form
+├── lib/
+│   └── peer.ts          # PeerJS helpers & code generation
+├── globals.css          # E-ink optimized styles
+├── layout.tsx           # Root layout
+└── page.tsx             # Entry point
+```
+
+## 🔒 Privacy
+
+- Messages are **not** routed through any server — they go directly between browsers via WebRTC
+- PeerJS's public signaling server is only used for the initial handshake (exchanging network info)
+- No data is stored, logged, or persisted anywhere
+- Closing the tab destroys the connection and all messages
+
+## 📄 License
+
+MIT
