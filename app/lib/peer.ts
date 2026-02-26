@@ -27,7 +27,22 @@ export function createPeer(id: string): Promise<Peer> {
       config: {
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
+          { urls: 'stun:stun1.l.google.com:19302' },
+          {
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+          },
+          {
+            urls: 'turn:openrelay.metered.ca:443',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+          },
+          {
+            urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+          }
         ]
       }
     });
@@ -60,10 +75,10 @@ export function connectToPeer(
       reject(err);
     });
 
-    // Timeout after 10s
+    // Timeout after 30s (increased for slow Kindle e-ink hardware & WebRTC proxying)
     setTimeout(() => {
-      reject(new Error("Connection timed out. Check the code and try again."));
-    }, 10000);
+      reject(new Error("Connection timed out (30s). Check the code and try again."));
+    }, 30000);
   });
 }
 
