@@ -1,34 +1,38 @@
 /**
- * Post-build script: transpiles ALL JS files in `out/` to ES2019 IN-PLACE.
- * Does NOT rename files — webpack's runtime constructs chunk URLs dynamically
- * from a hash map, and renaming breaks that mapping.
+ * Post-build script: transpiles ALL JS files in `out/` to ES2019 IN-PLACE,
+ * and appends a cache-buster query string (?v=TIMESTAMP) to all JS references
+ * in HTML and Webpack chunk loaders.
  *
- * Netlify purges its CDN cache on each deploy, so the same filenames
- * will serve the new transpiled content.
+ * This forces the Kindle Silk browser to bypass its aggressive local cache
+ * and fetch the new Chrome 80-compatible ES2019 transpiled files.
  */
 var swc = require("@swc/core");
 var fs = require("fs");
 var path = require("path");
 
 var OUT_DIR = path.join(__dirname, "..", "out");
+var CACHE_BUSTER = Date.now().toString();
 
 function walk(dir) {
     var files = [];
     fs.readdirSync(dir, { withFileTypes: true }).forEach(function (entry) {
         var full = path.join(dir, entry.name);
         if (entry.isDirectory()) files = files.concat(walk(full));
-        else if (entry.name.endsWith(".js")) files.push(full);
+        else files.push(full);
     });
     return files;
 }
 
 async function main() {
     var files = walk(OUT_DIR);
-    console.log("Transpiling " + files.length + " JS files to ES2019 (in-place)...");
+    var jsFiles = files.filter(function (f) { return f.endsWith(".js"); });
+    var htmlFiles = files.filter(function (f) { return f.endsWith(".html"); });
+
+    console.log("Transpiling " + jsFiles.length + " JS files to ES2019 (in-place)...");
 
     var changed = 0;
-    for (var i = 0; i < files.length; i++) {
-        var file = files[i];
+    for (var i = 0; i < jsFiles.length; i++) {
+        var file = jsFiles[i];
         var src = fs.readFileSync(file, "utf8");
 
         try {
@@ -52,12 +56,40 @@ async function main() {
         }
     }
 
-    console.log(changed + " file(s) transpiled, " + (files.length - changed) + " unchanged.");
+    console.log(changed + " file(s) transpiled.");
+
+    console.log("Injecting cache-buster (?v=" + CACHE_BUSTER + ") into HTML and Webpack runtime...");
+
+    // 1. Inject cache-buster into all HTML files
+    htmlFiles.forEach(function (file) {
+        var content = fs.readFileSync(file, "utf8");
+        // Append ?v= to any Next.js chunk script source that hasn't already been busted
+        var newContent = content.replace(/src="(\/_next\/static\/chunks\/[^"]+\.js)"/g, 'src="$1?v=' + CACHE_BUSTER + '"');
+        if (newContent !== content) {
+            fs.writeFileSync(file, newContent);
+            console.log("  C " + path.relative(process.cwd(), file));
+        }
+    });
+
+    // 2. Inject cache buster into Webpack runtime chunk loader
+    var webpackFiles = jsFiles.filter(function (f) { return path.basename(f).startsWith("webpack-"); });
+    webpackFiles.forEach(function (file) {
+        var content = fs.readFileSync(file, "utf8");
+        // Webpack uses  ... + ".js"  to construct chunk URLs.
+        // We replace it so it constructs  ... + ".js?v=TIMESTAMP"
+        var newContent = content.replace(/\.js"/g, '.js?v=' + CACHE_BUSTER + '"');
+        if (newContent !== content) {
+            fs.writeFileSync(file, newContent);
+            console.log("  C Webpack Runtime: " + path.basename(file));
+        }
+    });
+
+    console.log("Cache-busting complete.");
 
     // Verify
     var remaining = 0;
     var finalFiles = walk(OUT_DIR).filter(function (f) {
-        return f.indexOf("polyfills") < 0;
+        return f.indexOf("polyfills") < 0 && f.endsWith(".js");
     });
     for (var j = 0; j < finalFiles.length; j++) {
         var fc = fs.readFileSync(finalFiles[j], "utf8");
