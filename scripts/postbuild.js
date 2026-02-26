@@ -1,17 +1,14 @@
 /**
- * Post-build script: transpiles ALL JS files in `out/` to ES2019 IN-PLACE,
- * and appends a cache-buster query string (?v=TIMESTAMP) to all JS references
- * in HTML and Webpack chunk loaders.
- *
- * This forces the Kindle Silk browser to bypass its aggressive local cache
- * and fetch the new Chrome 80-compatible ES2019 transpiled files.
+ * Post-build script: transpiles ALL JS files in `out/` to ES2019
+ * and rehashes Next.js chunks to permanently bust Amazon Silk's cloud proxy cache 
+ * (which aggressively ignores query parameters like '?v=123').
  */
 var swc = require("@swc/core");
+var crypto = require("crypto");
 var fs = require("fs");
 var path = require("path");
 
 var OUT_DIR = path.join(__dirname, "..", "out");
-var CACHE_BUSTER = Date.now().toString();
 
 function walk(dir) {
     var files = [];
@@ -23,14 +20,23 @@ function walk(dir) {
     return files;
 }
 
+function shortHash(content) {
+    return crypto.createHash("md5").update(content).digest("hex").substring(0, 16);
+}
+
+// Regex to find Next.js chunk hashes in filenames (16+ hex chars)
+var HASH_REGEX = /([a-f0-9]{16,})\.js$/;
+
 async function main() {
-    var files = walk(OUT_DIR);
-    var jsFiles = files.filter(function (f) { return f.endsWith(".js"); });
-    var htmlFiles = files.filter(function (f) { return f.endsWith(".html"); });
+    var allFiles = walk(OUT_DIR);
+    var jsFiles = allFiles.filter(function (f) { return f.endsWith(".js"); });
 
-    console.log("Transpiling " + jsFiles.length + " JS files to ES2019 (in-place)...");
+    console.log("Transpiling " + jsFiles.length + " JS files to ES2019...");
 
+    // Maps old hash -> new hash
+    var hashReplacements = {};
     var changed = 0;
+
     for (var i = 0; i < jsFiles.length; i++) {
         var file = jsFiles[i];
         var src = fs.readFileSync(file, "utf8");
@@ -47,9 +53,27 @@ async function main() {
             });
 
             if (result.code !== src) {
-                fs.writeFileSync(file, result.code);
-                changed++;
-                console.log("  T " + path.relative(process.cwd(), file));
+                var oldBase = path.basename(file);
+                var match = oldBase.match(HASH_REGEX);
+
+                if (match) {
+                    var oldHash = match[1];
+                    var newHash = shortHash(result.code);
+                    var newBase = oldBase.replace(oldHash, newHash);
+                    var newPath = path.join(path.dirname(file), newBase);
+
+                    fs.writeFileSync(newPath, result.code);
+                    if (newPath !== file) fs.unlinkSync(file);
+
+                    hashReplacements[oldHash] = newHash;
+                    changed++;
+                    console.log("  T " + oldHash + " -> " + newHash + " (" + newBase + ")");
+                } else {
+                    // No hash found in filename, just transpile in-place
+                    fs.writeFileSync(file, result.code);
+                    changed++;
+                    console.log("  T " + oldBase + " (in-place)");
+                }
             }
         } catch (err) {
             console.log("  ! WARN: " + path.basename(file) + " - " + err.message);
@@ -58,47 +82,34 @@ async function main() {
 
     console.log(changed + " file(s) transpiled.");
 
-    console.log("Injecting cache-buster (?v=" + CACHE_BUSTER + ") into HTML and Webpack runtime...");
+    var replaceKeys = Object.keys(hashReplacements);
+    if (replaceKeys.length > 0) {
+        console.log("Globally substituting " + replaceKeys.length + " Next.js hashes in all output files...");
 
-    // 1. Inject cache-buster into all HTML files
-    htmlFiles.forEach(function (file) {
-        var content = fs.readFileSync(file, "utf8");
-        // Append ?v= to any Next.js chunk script source that hasn't already been busted
-        var newContent = content.replace(/src="(\/_next\/static\/chunks\/[^"]+\.js)"/g, 'src="$1?v=' + CACHE_BUSTER + '"');
-        if (newContent !== content) {
-            fs.writeFileSync(file, newContent);
-            console.log("  C " + path.relative(process.cwd(), file));
-        }
-    });
+        // Re-walk to get current filenames
+        var updatedFiles = walk(OUT_DIR);
+        var textFiles = updatedFiles.filter(function (f) {
+            return f.endsWith(".html") || f.endsWith(".js") || f.endsWith(".json") || f.endsWith(".txt") || f.endsWith(".css");
+        });
 
-    // 2. Inject cache buster into Webpack runtime chunk loader
-    var webpackFiles = jsFiles.filter(function (f) { return path.basename(f).startsWith("webpack-"); });
-    webpackFiles.forEach(function (file) {
-        var content = fs.readFileSync(file, "utf8");
-        // Webpack uses  ... + ".js"  to construct chunk URLs.
-        // We replace it so it constructs  ... + ".js?v=TIMESTAMP"
-        var newContent = content.replace(/\.js"/g, '.js?v=' + CACHE_BUSTER + '"');
-        if (newContent !== content) {
-            fs.writeFileSync(file, newContent);
-            console.log("  C Webpack Runtime: " + path.basename(file));
-        }
-    });
+        for (var j = 0; j < textFiles.length; j++) {
+            var tf = textFiles[j];
+            var content = fs.readFileSync(tf, "utf8");
+            var modified = content;
 
-    console.log("Cache-busting complete.");
+            // Perform global string replacement for every old hash -> new hash
+            for (var k = 0; k < replaceKeys.length; k++) {
+                modified = modified.split(replaceKeys[k]).join(hashReplacements[replaceKeys[k]]);
+            }
 
-    // Verify
-    var remaining = 0;
-    var finalFiles = walk(OUT_DIR).filter(function (f) {
-        return f.indexOf("polyfills") < 0 && f.endsWith(".js");
-    });
-    for (var j = 0; j < finalFiles.length; j++) {
-        var fc = fs.readFileSync(finalFiles[j], "utf8");
-        if (/[^?]\?\?[^?=]/.test(fc)) {
-            remaining++;
-            console.log("  !! Still has ??: " + path.basename(finalFiles[j]));
+            if (modified !== content) {
+                fs.writeFileSync(tf, modified);
+                console.log("  R updated references in " + path.basename(tf));
+            }
         }
     }
-    console.log(remaining === 0 ? "All files are Chrome 80 compatible." : "WARNING: " + remaining + " file(s) still have ?? syntax!");
+
+    console.log("Cache-busting complete.");
 }
 
 main().catch(function (err) {

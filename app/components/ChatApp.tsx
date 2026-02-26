@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Peer, { DataConnection } from "peerjs";
-import { generateShortCode, createPeer, connectToPeer, generateMessageId, ChatMessage } from "../lib/peer";
+import { generateShortCode, createPeer, connectToPeer, generateMessageId, ChatMessage, NETWORK_NAMESPACE } from "../lib/peer";
 import Lobby from "./Lobby";
 import ChatView from "./ChatView";
 
@@ -84,7 +84,8 @@ export default function ChatApp() {
 
     const handleConnection = useCallback((conn: DataConnection, alreadyOpen = false) => {
         connRef.current = conn;
-        setPeerCode(conn.peer);
+        const displayCode = conn.peer.replace(NETWORK_NAMESPACE, '');
+        setPeerCode(displayCode);
         setMessages([]);
         setError(null);
 
@@ -112,16 +113,18 @@ export default function ChatApp() {
         });
 
         conn.on("close", () => {
+            console.log("Connection closed manually or dropped.");
             setAppState("lobby");
             connRef.current = null;
             setPeerCode("");
             setMessages([]);
         });
 
-        conn.on("error", () => {
+        conn.on("error", (err) => {
+            console.error("Connection error:", err);
             setAppState("lobby");
             connRef.current = null;
-            setError("Connection lost.");
+            setError(`Connection error: ${err?.message || err || "Unknown error"}`);
         });
     }, []);
 
@@ -135,6 +138,7 @@ export default function ChatApp() {
                 const conn = await connectToPeer(peerRef.current, remoteCode);
                 handleConnection(conn, true); // already open
             } catch (err) {
+                console.error("Failed to connect:", err);
                 setError(err instanceof Error ? err.message : "Failed to connect.");
                 setAppState("lobby");
             }

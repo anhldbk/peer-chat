@@ -8,6 +8,7 @@ export interface ChatMessage {
 }
 
 const CHARS = "0123456789";
+export const NETWORK_NAMESPACE = "pc-msg-v1-";
 
 export function generateShortCode(): string {
   let code = "";
@@ -19,8 +20,16 @@ export function generateShortCode(): string {
 
 export function createPeer(id: string): Promise<Peer> {
   return new Promise((resolve, reject) => {
-    const peer = new Peer(id, {
+    // Prefix ID to prevent global namespace collisions on the default PeerJS server
+    const networkId = `${NETWORK_NAMESPACE}${id}`;
+    const peer = new Peer(networkId, {
       debug: 0,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+      }
     });
 
     peer.on("open", () => {
@@ -38,7 +47,10 @@ export function connectToPeer(
   remoteId: string
 ): Promise<DataConnection> {
   return new Promise((resolve, reject) => {
-    const conn = peer.connect(remoteId, { reliable: true });
+    // Remove { reliable: true } as WebRTC data channels are reliable by default 
+    // and PeerJS's reliable shim can cause issues on certain browsers like Kindle's Chrome 80.
+    const networkId = `${NETWORK_NAMESPACE}${remoteId}`;
+    const conn = peer.connect(networkId);
 
     conn.on("open", () => {
       resolve(conn);
