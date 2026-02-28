@@ -30,7 +30,7 @@ export default function Lobby({ myCode, onConnect, isConnecting, error }: LobbyP
     };
 
     return (
-        <div className="lobby-container">
+        <main className="lobby-container">
             {/* Decorative orbs */}
             <div className="orb orb-1" />
             <div className="orb orb-2" />
@@ -38,7 +38,7 @@ export default function Lobby({ myCode, onConnect, isConnecting, error }: LobbyP
 
             <div className="lobby-content">
                 {/* Logo / Header */}
-                <div className="lobby-header fade-in">
+                <header className="lobby-header fade-in">
                     <div className="logo-icon pulse">
                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -46,7 +46,7 @@ export default function Lobby({ myCode, onConnect, isConnecting, error }: LobbyP
                     </div>
                     <h1 className="lobby-title bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">PeerChat</h1>
                     <p className="lobby-subtitle">Instant peer-to-peer messaging — no servers, no sign-up</p>
-                </div>
+                </header>
 
                 {/* My Code Card */}
                 <div className="glass-card code-card slide-up-1">
@@ -71,8 +71,8 @@ export default function Lobby({ myCode, onConnect, isConnecting, error }: LobbyP
                 </div>
 
                 {/* Connect Form */}
-                <div className="glass-card connect-card slide-up-3">
-                    <div className="card-label">Enter Peer&apos;s Code</div>
+                <section className="glass-card connect-card slide-up-3">
+                    <h2 className="card-label">Enter Peer&apos;s Code</h2>
                     <div className="connect-input-row" style={{ position: "relative" }}>
                         <input
                             ref={inputRef}
@@ -85,6 +85,7 @@ export default function Lobby({ myCode, onConnect, isConnecting, error }: LobbyP
                             disabled={isConnecting}
                             autoComplete="off"
                             spellCheck={false}
+                            aria-label="Enter Peer's Code"
                         />
                         {isConnecting && (
                             <div style={{ position: "absolute", right: "20px", top: "50%", transform: "translateY(-50%)" }}>
@@ -94,7 +95,7 @@ export default function Lobby({ myCode, onConnect, isConnecting, error }: LobbyP
                     </div>
 
                     {error && (
-                        <div className="error-message shake">
+                        <div className="error-message shake" role="alert">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <circle cx="12" cy="12" r="10" />
                                 <line x1="15" y1="9" x2="9" y2="15" />
@@ -103,12 +104,12 @@ export default function Lobby({ myCode, onConnect, isConnecting, error }: LobbyP
                             {error}
                         </div>
                     )}
-                </div>
+                </section>
 
-                <p className="footer-note slide-up-4">
+                <footer className="footer-note slide-up-4">
                     End-to-end encrypted via WebRTC · No data stored
-                </p>
+                </footer>
             </div>
-        </div>
+        </main>
     );
 }

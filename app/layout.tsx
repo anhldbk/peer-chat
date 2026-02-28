@@ -8,8 +8,26 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "PeerChat — P2P Messaging",
-  description: "Instant peer-to-peer messaging with short codes. No servers, no sign-up, end-to-end encrypted via WebRTC.",
+  title: "PeerChat — Open Source P2P Messaging",
+  description: "PeerChat is an open source, free, peer-to-peer chat. No servers to store logs, no eavesdropping. Connect instantly with a 3-digit code.",
+  keywords: ["p2p chat", "open source chat", "free chat", "peer-to-peer", "encrypted chat", "no server chat", "secure messaging", "webrtc chat"],
+  authors: [{ name: "PeerChat" }],
+  openGraph: {
+    title: "PeerChat — Open Source P2P Messaging",
+    description: "Free, open source peer-to-peer chat with zero server logging and complete privacy. Connect instantly.",
+    type: "website",
+    locale: "en_US",
+    siteName: "PeerChat",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PeerChat — Open Source P2P Messaging",
+    description: "Free, open source peer-to-peer chat with zero server logging and complete privacy.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
