@@ -11,26 +11,7 @@ interface LobbyProps {
 
 export default function Lobby({ myCode, onConnect, isConnecting, error }: LobbyProps) {
     const [remoteCode, setRemoteCode] = useState("");
-    const [copied, setCopied] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
-
-    const handleCopy = async () => {
-        try {
-            await navigator.clipboard.writeText(myCode);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        } catch {
-            // fallback
-            const el = document.createElement("textarea");
-            el.value = myCode;
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand("copy");
-            document.body.removeChild(el);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        }
-    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -54,52 +35,40 @@ export default function Lobby({ myCode, onConnect, isConnecting, error }: LobbyP
 
             <div className="lobby-content">
                 {/* Logo / Header */}
-                <div className="lobby-header">
-                    <div className="logo-icon">
+                <div className="lobby-header fade-in">
+                    <div className="logo-icon pulse">
                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                         </svg>
                     </div>
-                    <h1 className="lobby-title">PeerChat</h1>
+                    <h1 className="lobby-title bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">PeerChat</h1>
                     <p className="lobby-subtitle">Instant peer-to-peer messaging — no servers, no sign-up</p>
                 </div>
 
                 {/* My Code Card */}
-                <div className="glass-card code-card">
+                <div className="glass-card code-card slide-up-1">
                     <div className="card-label">Your Code</div>
                     <div className="code-display-row">
                         <div className="code-display">
                             {myCode.split("").map((char, i) => (
-                                <span key={i} className="code-char" style={{ animationDelay: `${i * 0.08}s` }}>
+                                <span key={i} className="code-char" style={{ animationDelay: `${i * 0.15}s` }}>
                                     {char}
                                 </span>
                             ))}
                         </div>
-                        <button onClick={handleCopy} className="copy-btn" title="Copy code">
-                            {copied ? (
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                    <polyline points="20 6 9 17 4 12" />
-                                </svg>
-                            ) : (
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                                </svg>
-                            )}
-                        </button>
                     </div>
                     <p className="code-hint">Share this code with your friend</p>
                 </div>
 
                 {/* Divider */}
-                <div className="divider">
+                <div className="divider slide-up-2">
                     <span className="divider-line" />
                     <span className="divider-text">or connect to a peer</span>
                     <span className="divider-line" />
                 </div>
 
                 {/* Connect Form */}
-                <form onSubmit={handleSubmit} className="glass-card connect-card">
+                <form onSubmit={handleSubmit} className="glass-card connect-card slide-up-3">
                     <div className="card-label">Enter Peer&apos;s Code</div>
                     <div className="connect-input-row">
                         <input
@@ -116,7 +85,7 @@ export default function Lobby({ myCode, onConnect, isConnecting, error }: LobbyP
                         />
                         <button
                             type="submit"
-                            className="connect-btn"
+                            className={`connect-btn ${isConnecting ? 'connecting' : ''}`}
                             disabled={remoteCode.length !== 3 || isConnecting}
                         >
                             {isConnecting ? (
@@ -131,7 +100,7 @@ export default function Lobby({ myCode, onConnect, isConnecting, error }: LobbyP
                     </div>
 
                     {error && (
-                        <div className="error-message">
+                        <div className="error-message shake">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <circle cx="12" cy="12" r="10" />
                                 <line x1="15" y1="9" x2="9" y2="15" />
@@ -142,7 +111,7 @@ export default function Lobby({ myCode, onConnect, isConnecting, error }: LobbyP
                     )}
                 </form>
 
-                <p className="footer-note">
+                <p className="footer-note slide-up-4">
                     End-to-end encrypted via WebRTC · No data stored
                 </p>
             </div>

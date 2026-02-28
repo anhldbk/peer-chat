@@ -100,7 +100,7 @@ export default function ChatApp() {
         }
 
         conn.on("data", (data) => {
-            const payload = data as { text: string; id: string; timestamp: number };
+            const payload = data as ChatMessage;
             setMessages((prev) => [
                 ...prev,
                 {
@@ -108,6 +108,7 @@ export default function ChatApp() {
                     text: payload.text,
                     sender: "peer",
                     timestamp: payload.timestamp,
+                    file: payload.file,
                 },
             ]);
         });
@@ -146,18 +147,48 @@ export default function ChatApp() {
         [handleConnection]
     );
 
-    const handleSend = useCallback((text: string) => {
+    const handleSend = useCallback((text: string, file?: File) => {
         if (!connRef.current) return;
 
-        const msg: ChatMessage = {
-            id: generateMessageId(),
-            text,
-            sender: "me",
-            timestamp: Date.now(),
-        };
+        if (file) {
+            // Process file sending
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const arrayBuffer = e.target?.result as ArrayBuffer;
+                if (!arrayBuffer) return;
 
-        connRef.current.send({ id: msg.id, text: msg.text, timestamp: msg.timestamp });
-        setMessages((prev) => [...prev, msg]);
+                const msg: ChatMessage = {
+                    id: generateMessageId(),
+                    text,
+                    sender: "me",
+                    timestamp: Date.now(),
+                    file: {
+                        name: file.name,
+                        type: file.type,
+                        size: file.size,
+                        data: arrayBuffer,
+                    },
+                };
+
+                // Send to peer
+                connRef.current!.send(msg);
+
+                // Add to local state
+                setMessages((prev) => [...prev, msg]);
+            };
+            reader.readAsArrayBuffer(file);
+        } else {
+            // Process text sending
+            const msg: ChatMessage = {
+                id: generateMessageId(),
+                text,
+                sender: "me",
+                timestamp: Date.now(),
+            };
+
+            connRef.current.send(msg);
+            setMessages((prev) => [...prev, msg]);
+        }
     }, []);
 
     const handleDisconnect = useCallback(() => {

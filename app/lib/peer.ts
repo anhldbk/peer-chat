@@ -5,6 +5,12 @@ export interface ChatMessage {
   text: string;
   sender: "me" | "peer";
   timestamp: number;
+  file?: {
+    name: string;
+    type: string;
+    size: number;
+    data: ArrayBuffer;
+  };
 }
 
 const CHARS = "0123456789";
@@ -75,10 +81,10 @@ export function connectToPeer(
       reject(err);
     });
 
-    // Timeout after 30s (increased for slow Kindle e-ink hardware & WebRTC proxying)
+    // Timeout after 15s
     setTimeout(() => {
-      reject(new Error("Connection timed out (30s). Check the code and try again."));
-    }, 30000);
+      reject(new Error("Connection timed out. Check the code and try again."));
+    }, 15000);
   });
 }
 
