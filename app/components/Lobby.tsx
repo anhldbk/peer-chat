@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import QRCode from "react-qr-code";
 
 interface LobbyProps {
     myCode: string;
@@ -11,7 +12,15 @@ interface LobbyProps {
 
 export default function Lobby({ myCode, onConnect, isConnecting, error }: LobbyProps) {
     const [remoteCode, setRemoteCode] = useState("");
+    const [activeTab, setActiveTab] = useState<"code" | "qr">("code");
+    const [qrUrl, setQrUrl] = useState("");
     const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            setQrUrl(`${window.location.origin}?code=${myCode}`);
+        }
+    }, [myCode]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -49,18 +58,42 @@ export default function Lobby({ myCode, onConnect, isConnecting, error }: LobbyP
                 </header>
 
                 {/* My Code Card */}
-                <div className="glass-card code-card slide-up-1">
-                    <div className="card-label">Your Code</div>
-                    <div className="code-display-row">
-                        <div className="code-display">
-                            {myCode.split("").map((char, i) => (
-                                <span key={i} className="code-char" style={{ animationDelay: `${i * 0.15}s` }}>
-                                    {char}
-                                </span>
-                            ))}
-                        </div>
+                <div className="glass-card code-card slide-up-1" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+
+                    <div className="tab-buttons" style={{ display: 'flex', gap: '8px', marginBottom: '24px', background: 'rgba(0,0,0,0.2)', padding: '4px', borderRadius: '12px' }}>
+                        <button
+                            onClick={() => setActiveTab("code")}
+                            style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '14px', fontWeight: 600, background: activeTab === "code" ? 'rgba(59, 130, 246, 0.4)' : 'transparent', color: activeTab === "code" ? '#fff' : 'var(--text-muted)', transition: 'all 0.2s' }}
+                        >
+                            Text Code
+                        </button>
+                        <button
+                            onClick={() => setActiveTab("qr")}
+                            style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '14px', fontWeight: 600, background: activeTab === "qr" ? 'rgba(59, 130, 246, 0.4)' : 'transparent', color: activeTab === "qr" ? '#fff' : 'var(--text-muted)', transition: 'all 0.2s' }}
+                        >
+                            QR Code
+                        </button>
                     </div>
-                    <p className="code-hint">Share this code with your friend</p>
+
+                    {activeTab === "code" ? (
+                        <>
+                            <div className="code-display-row mt-2">
+                                <div className="code-display">
+                                    {myCode.split("").map((char, i) => (
+                                        <span key={i} className="code-char" style={{ animationDelay: `${i * 0.15}s` }}>
+                                            {char}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                            <p className="code-hint">Share this code with your friend</p>
+                        </>
+                    ) : (
+                        <div style={{ padding: '16px', background: '#fff', borderRadius: '16px', display: 'inline-block', margin: '8px 0', animation: 'fadeIn 0.3s ease-out forwards' }}>
+                            {qrUrl && <QRCode value={qrUrl} size={160} level="H" style={{ display: 'block' }} />}
+                            <p style={{ textAlign: 'center', color: '#000', fontSize: '12px', fontWeight: 600, marginTop: '12px' }}>Scan to connect instantly</p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Divider */}

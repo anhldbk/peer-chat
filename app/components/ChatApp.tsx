@@ -25,14 +25,14 @@ export default function ChatApp() {
 
         let mounted = true;
 
-        createPeer(code)
-            .then((peer) => {
+        const initializePeer = async (peerCodeToTry: string) => {
+            try {
+                const peer = await createPeer(peerCodeToTry);
                 if (!mounted) {
                     peer.destroy();
                     return;
                 }
                 peerRef.current = peer;
-                setAppState("lobby");
 
                 // Listen for incoming connections
                 peer.on("connection", (conn) => {
@@ -45,39 +45,59 @@ export default function ChatApp() {
                         peerRef.current.reconnect();
                     }
                 });
-            })
-            .catch(() => {
+
+                // Check for URL parameters to auto-connect
+                const params = new URLSearchParams(window.location.search);
+                const connectCode = params.get("code");
+                if (connectCode && connectCode.length === 3) {
+                    // Auto connect payload
+                    handleConnect(connectCode.toUpperCase());
+                } else {
+                    setAppState("lobby");
+                }
+
+            } catch (err) {
                 if (!mounted) return;
-                // If code is taken, try again with a new code
+                console.warn(`Failed to connect with code ${peerCodeToTry}:`, err);
+
+                // If code is taken or failed, try again with a new code
                 const retryCode = generateShortCode();
                 setMyCode(retryCode);
-                createPeer(retryCode)
-                    .then((peer) => {
-                        if (!mounted) {
-                            peer.destroy();
-                            return;
-                        }
-                        peerRef.current = peer;
-                        setAppState("lobby");
-                        peer.on("connection", (conn) => {
-                            handleConnection(conn);
-                        });
-                    })
-                    .catch((err) => {
-                        if (!mounted) return;
-                        setError(`Could not connect to signaling server: ${err.message}`);
-                        setAppState("lobby");
+
+                try {
+                    const peer = await createPeer(retryCode);
+                    if (!mounted) {
+                        peer.destroy();
+                        return;
+                    }
+                    peerRef.current = peer;
+
+                    peer.on("connection", (conn) => {
+                        handleConnection(conn);
                     });
-            });
+
+                    // Check for URL parameters to auto-connect
+                    const params = new URLSearchParams(window.location.search);
+                    const connectCode = params.get("code");
+                    if (connectCode && connectCode.length === 3) {
+                        handleConnect(connectCode.toUpperCase());
+                    } else {
+                        setAppState("lobby");
+                    }
+
+                } catch (retryErr) {
+                    if (!mounted) return;
+                    setError(`Could not connect to signaling server: ${retryErr instanceof Error ? retryErr.message : String(retryErr)}`);
+                    setAppState("lobby");
+                }
+            }
+        };
+
+        initializePeer(code);
 
         return () => {
             mounted = false;
-            if (connRef.current) {
-                connRef.current.close();
-            }
-            if (peerRef.current) {
-                peerRef.current.destroy();
-            }
+            // Removed closing references inside cleanup to prevent disconnecting during React strict mode double-renders
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
