@@ -24,6 +24,9 @@ export default function Lobby({ myCode, onConnect, isConnecting, error }: LobbyP
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value.replace(/[^0-9]/g, "").slice(0, 3);
         setRemoteCode(val);
+        if (val.length === 3) {
+            onConnect(val);
+        }
     };
 
     return (
@@ -68,9 +71,9 @@ export default function Lobby({ myCode, onConnect, isConnecting, error }: LobbyP
                 </div>
 
                 {/* Connect Form */}
-                <form onSubmit={handleSubmit} className="glass-card connect-card slide-up-3">
+                <div className="glass-card connect-card slide-up-3">
                     <div className="card-label">Enter Peer&apos;s Code</div>
-                    <div className="connect-input-row">
+                    <div className="connect-input-row" style={{ position: "relative" }}>
                         <input
                             ref={inputRef}
                             type="text"
@@ -83,20 +86,11 @@ export default function Lobby({ myCode, onConnect, isConnecting, error }: LobbyP
                             autoComplete="off"
                             spellCheck={false}
                         />
-                        <button
-                            type="submit"
-                            className={`connect-btn ${isConnecting ? 'connecting' : ''}`}
-                            disabled={remoteCode.length !== 3 || isConnecting}
-                        >
-                            {isConnecting ? (
+                        {isConnecting && (
+                            <div style={{ position: "absolute", right: "20px", top: "50%", transform: "translateY(-50%)" }}>
                                 <span className="spinner" />
-                            ) : (
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                    <line x1="5" y1="12" x2="19" y2="12" />
-                                    <polyline points="12 5 19 12 12 19" />
-                                </svg>
-                            )}
-                        </button>
+                            </div>
+                        )}
                     </div>
 
                     {error && (
@@ -109,7 +103,7 @@ export default function Lobby({ myCode, onConnect, isConnecting, error }: LobbyP
                             {error}
                         </div>
                     )}
-                </form>
+                </div>
 
                 <p className="footer-note slide-up-4">
                     End-to-end encrypted via WebRTC · No data stored
